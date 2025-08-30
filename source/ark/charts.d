@@ -66,36 +66,88 @@ template ArkCharts()
         if (labels.length == 0 || values.length == 0 || labels.length != values.length)
             return;
 
-        if (title.length > 0)
-        {
-            writeln(colorize(title, Color.BRIGHT_WHITE));
-            drawSeparator("─", title.length, Color.BRIGHT_BLACK);
-        }
-
         auto maxValue = values.maxElement;
         if (maxValue <= 0)
             maxValue = 1;
 
         auto maxLabelWidth = labels.map!(l => l.length).maxElement;
 
+        size_t maxValueWidth = 0;
+        if (showValues)
+        {
+            foreach (value; values)
+            {
+                auto formatted = config.formatNumber(value);
+                if (formatted.length > maxValueWidth)
+                    maxValueWidth = formatted.length;
+            }
+        }
+
+        size_t innerWidth = maxLabelWidth + 3 + maxBarWidth;
+        if (showValues)
+            innerWidth += 1 + maxValueWidth;
+
+        size_t totalWidth = innerWidth + 4;
+
+        if (title.length > 0)
+        {
+            size_t availableForTitle = totalWidth - 6; // subtract "┌─┤ " and " ├─┐"
+            if (title.length <= availableForTitle)
+            {
+                size_t leftPadding = (availableForTitle - title.length) / 2;
+                size_t rightPadding = availableForTitle - title.length - leftPadding;
+
+                write(colorize("┌─", Color.BRIGHT_BLACK));
+                write(colorize("─".replicate(leftPadding), Color.BRIGHT_BLACK));
+                write(colorize("┤ ", Color.BRIGHT_BLACK));
+                write(colorize(title, Color.BRIGHT_WHITE));
+                write(colorize(" ├", Color.BRIGHT_BLACK));
+                write(colorize("─".replicate(rightPadding), Color.BRIGHT_BLACK));
+                write(colorize("─┐", Color.BRIGHT_BLACK));
+            }
+            else
+            {
+                write(colorize("┌", Color.BRIGHT_BLACK));
+                write(colorize("─".replicate(totalWidth - 2), Color.BRIGHT_BLACK));
+                write(colorize("┐", Color.BRIGHT_BLACK));
+            }
+            writeln;
+        }
+        else
+        {
+            write(colorize("┌", Color.BRIGHT_BLACK));
+            write(colorize("─".replicate(totalWidth - 2), Color.BRIGHT_BLACK));
+            write(colorize("┐", Color.BRIGHT_BLACK));
+            writeln;
+        }
+
         foreach (i, label; labels)
         {
             auto value = values[i];
             auto barLength = cast(size_t)((value / maxValue) * maxBarWidth);
             Color currentBarColor = config.getColorForBar(i, barColor);
-
-            writef("%-*s │", maxLabelWidth, label);
+            write(colorize("│ ", Color.BRIGHT_BLACK));
+            writef("%-*s", maxLabelWidth, label);
+            write(" │");
             write(colorize("█".replicate(barLength), currentBarColor));
+            write(" ".replicate(maxBarWidth - barLength));
             if (showValues)
             {
                 write(" ");
-                write(config.formatNumber(value));
+                writef("%*s", maxValueWidth, config.formatNumber(value));
             }
+
+            write(colorize("  │", Color.BRIGHT_BLACK));
             writeln;
         }
-    }
 
-    /** 
+        // Bottom border
+        write(colorize("└", Color.BRIGHT_BLACK));
+        write(colorize("─".replicate(totalWidth - 2), Color.BRIGHT_BLACK));
+        write(colorize("┘", Color.BRIGHT_BLACK));
+        writeln;
+    }
+    /**
      * Draw a horizontal breakdown chart.
      *
      * Params:
@@ -103,7 +155,7 @@ template ArkCharts()
      *   values      = Values for each category
      *   width       = Total width of the breakdown bar
      *   title       = Optional title for the chart
-     *   colors      = Colors for each category 
+     *   colors      = Colors for each category
      *   legendStyle = DOT or TABLE format
      */
     static void drawBreakdownChart(
@@ -186,7 +238,7 @@ template ArkCharts()
         drawSeparator("─", width, Color.BRIGHT_BLACK);
     }
 
-    /** 
+    /**
      * Draw a pie chart.
      *
      * Params:
