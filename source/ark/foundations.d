@@ -466,10 +466,11 @@ template ArkFoundationComponents() {
 
         auto timestamp = Clock.currTime.toString()[11 .. 19];
         string toast = format(" %s %s (%s) ", icon, message, strip(timestamp));
+        auto count = toast.length - getAsiaCount(toast);
 
-        writeln(colorize("╭" ~ "─".replicate(length(toast) + 2) ~ "╮", bgColor));
+        writeln(colorize("╭" ~ "─".replicate(count) ~ "╮", bgColor));
         writeln(colorize("│" ~ toast ~ "  │", bgColor));
-        writeln(colorize("╰" ~ "─".replicate(length(toast) + 2) ~ "╯", bgColor));
+        writeln(colorize("╰" ~ "─".replicate(count) ~ "╯", bgColor));
     }
 
     static void drawLoadingDots(string message = "Loading", size_t dots = 3) {
