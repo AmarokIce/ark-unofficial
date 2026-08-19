@@ -1,7 +1,6 @@
 module ark.components;
 
-mixin template ArkComponents()
-{
+mixin template ArkComponents() {
     import ark.foundations;
     import ark.charts;
     import ark.graphs;

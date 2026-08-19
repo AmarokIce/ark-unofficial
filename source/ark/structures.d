@@ -1,7 +1,6 @@
 module ark.structures;
 
-enum Color : string
-{
+enum Color : string {
     RESET = "\033[0m",
     BLACK = "\033[30m",
     RED = "\033[31m",
@@ -55,10 +54,8 @@ enum Color : string
     SOLARIZEDGREEN = "\033[38;5;64m"
 }
 
-template Structures()
-{
-    enum Style : string
-    {
+template Structures() {
+    enum Style : string {
         RESET = "\033[0m",
         BOLD = "\033[1m",
         DIM = "\033[2m",
@@ -69,8 +66,7 @@ template Structures()
         STRIKETHROUGH = "\033[9m"
     }
 
-    enum LogLevel
-    {
+    enum LogLevel {
         INFO,
         SUCCESS,
         WARNING,
@@ -78,8 +74,7 @@ template Structures()
         DEBUG
     }
 
-    enum BorderStyle
-    {
+    enum BorderStyle {
         SINGLE,
         DOUBLE,
         ROUNDED,
@@ -87,29 +82,25 @@ template Structures()
         ASCII
     }
 
-    enum LegendStyle
-    {
+    enum LegendStyle {
         TABLE,
         DOT
     }
 
-    struct BorderChars
-    {
+    struct BorderChars {
         string topLeft, topRight, bottomLeft, bottomRight;
         string horizontal, vertical;
         string topJoin, bottomJoin, leftJoin, rightJoin, cross;
     }
 
-    struct FlowNode
-    {
+    struct FlowNode {
         string id;
         string text;
         size_t x, y;
         size_t width = 0;
     }
 
-    struct FlowConnection
-    {
+    struct FlowConnection {
         string fromId;
         string toId;
         string direction = "down";

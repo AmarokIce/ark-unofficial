@@ -11,13 +11,10 @@ import std.stdio;
 import std.string;
 import std.datetime;
 
-version (Windows)
-{
+version (Windows) {
 	import core.sys.windows.windows;
 	import core.sys.windows.wincon;
-}
-else
-{
+} else {
 	import core.sys.posix.unistd;
 	import core.sys.posix.termios;
 }
@@ -27,8 +24,7 @@ mixin Structures!();
 /** 
  * Terminal components.
  */
-final class ArkTerm
-{
+final class ArkTerm {
 	private static immutable defaultLineLength = 50;
 	private static bool colorEnabled = true;
 	private static size_t spinnerIndex = 0;
@@ -38,8 +34,7 @@ final class ArkTerm
 
 	private static BorderChars[BorderStyle] borderStyles;
 
-	static this()
-	{
+	static this() {
 		version (Windows)
 			SetConsoleOutputCP(65_001);
 
@@ -55,12 +50,9 @@ final class ArkTerm
 	mixin ArkStyle!();
 	mixin ArkComponents!();
 
-	static void clear()
-	{
-		version (Windows)
-		{
-			for (int i = 0; i < 100; i++)
-			{
+	static void clear() {
+		version (Windows) {
+			for (int i = 0; i < 100; i++) {
 				writeln("\n");
 			}
 			HANDLE hConsole = GetStdHandle(
@@ -68,8 +60,7 @@ final class ArkTerm
 			CONSOLE_SCREEN_BUFFER_INFO csbi;
 
 			if (!GetConsoleScreenBufferInfo(
-					hConsole, &csbi))
-			{
+					hConsole, &csbi)) {
 				writeln("Failed to get console buffer info.");
 				return;
 			}
@@ -94,20 +85,17 @@ final class ArkTerm
 					.Top);
 			SetConsoleCursorPosition(hConsole, topLeft);
 		}
-		version (Posix)
-		{
+		version (Posix) {
 			writeln("\033[2J\033[H");
 		}
 	}
 
-	static void log(LogLevel level, string message)
-	{
+	static void log(LogLevel level, string message) {
 		auto timestamp = Clock.currTime.toISOExtString()[0 .. 19];
 		string levelStr;
 		Color levelColor;
 
-		final switch (level)
-		{
+		final switch (level) {
 		case LogLevel.INFO:
 			levelStr = "INFO ";
 			levelColor = Color.BLUE;
@@ -141,20 +129,15 @@ final class ArkTerm
 /** 
  * Specifically for input-capturing TUIs.
  */
-final class ArkTUI
-{
-	version (Windows)
-	{
+final class ArkTUI {
+	version (Windows) {
 		HANDLE hIn;
 		DWORD originalMode;
-	}
-	else
-	{
+	} else {
 		termios origTerm;
 	}
 
-	this()
-	{
+	this() {
 		version (Windows)
 			SetConsoleOutputCP(65_001);
 
@@ -162,26 +145,21 @@ final class ArkTUI
 		write("\033[?25l");
 	}
 
-	~this()
-	{
+	~this() {
 		disableRawMode();
 		write("\033[?25h");
 		write("\033[0m\033[2J\033[H");
 	}
 
-	void enableRawMode()
-	{
-		version (Windows)
-		{
+	void enableRawMode() {
+		version (Windows) {
 			hIn = GetStdHandle(STD_INPUT_HANDLE);
 			DWORD mode;
 			GetConsoleMode(hIn, &mode);
 			originalMode = mode;
 			mode &= ~(ENABLE_LINE_INPUT | ENABLE_ECHO_INPUT);
 			SetConsoleMode(hIn, mode);
-		}
-		else
-		{
+		} else {
 			tcgetattr(0, &origTerm);
 			termios raw = origTerm;
 			raw.c_lflag &= ~(ICANON | ECHO);
@@ -189,52 +167,42 @@ final class ArkTUI
 		}
 	}
 
-	void disableRawMode()
-	{
+	void disableRawMode() {
 		version (Windows)
 			SetConsoleMode(hIn, originalMode);
 		else
 			tcsetattr(0, TCSAFLUSH, &origTerm);
 	}
 
-	char readKey()
-	{
+	char readKey() {
 		char c;
-		version (Windows)
-		{
+		version (Windows) {
 			DWORD read;
 			ReadConsoleA(hIn, &c, 1, &read, null);
-		}
-		else
-		{
+		} else {
 			read(0, &c, 1);
 		}
 		return c;
 	}
 
-	void clear()
-	{
+	void clear() {
 		write("\033[2J\033[H");
 	}
 
-	void moveTo(int row, int col)
-	{
+	void moveTo(int row, int col) {
 		writef("\033[%d;%dH", row, col);
 	}
 
-	void drawBox(int x, int y, int w, int h, string title = "")
-	{
+	void drawBox(int x, int y, int w, int h, string title = "") {
 		moveTo(y, x);
 		write("┌" ~ "─".replicate(w - 2) ~ "┐");
-		foreach (i; 1 .. h - 1)
-		{
+		foreach (i; 1 .. h - 1) {
 			moveTo(y + i, x);
 			write("│" ~ " ".replicate(w - 2) ~ "│");
 		}
 		moveTo(y + h - 1, x);
 		write("└" ~ "─".replicate(w - 2) ~ "┘");
-		if (title.length > 0 && title.length < w - 4)
-		{
+		if (title.length > 0 && title.length < w - 4) {
 			moveTo(y, x + 2);
 			write(
 				" " ~ title ~ " ");
@@ -255,33 +223,26 @@ final class ArkTUI
 		string defaultValue = "",
 		size_t width = 40,
 		bool secret = false
-	)
-	{
+	) {
 		import ark.style : ArkStyle;
 		import std.conv : to;
 		import std.string : strip;
 
-		version (Windows)
-		{
+		version (Windows) {
 			import core.sys.windows.windows;
-		}
-		else
-		{
+		} else {
 			import core.sys.posix.termios;
 		}
 
 		string input = defaultValue;
 		size_t cursorPos = input.length;
 
-		version (Windows)
-		{
+		version (Windows) {
 			HANDLE hStdin = GetStdHandle(STD_INPUT_HANDLE);
 			DWORD oldMode;
 			GetConsoleMode(hStdin, &oldMode);
 			SetConsoleMode(hStdin, oldMode & ~(ENABLE_LINE_INPUT | ENABLE_ECHO_INPUT));
-		}
-		else
-		{
+		} else {
 			termios oldTermios, newTermios;
 			tcgetattr(0, &oldTermios);
 			newTermios = oldTermios;
@@ -289,8 +250,7 @@ final class ArkTUI
 			tcsetattr(0, TCSANOW, &newTermios);
 		}
 
-		scope (exit)
-		{
+		scope (exit) {
 			version (Windows)
 				SetConsoleMode(GetStdHandle(STD_INPUT_HANDLE), oldMode);
 			else
@@ -304,8 +264,7 @@ final class ArkTUI
 		writeln(noConColorize("│" ~ " ".replicate(width) ~ "│", Color.WHITE));
 		writeln(noConColorize("└" ~ "─".replicate(width) ~ "┘", Color.WHITE));
 
-		void updateContent()
-		{
+		void updateContent() {
 			write("\033[2A\033[2G");
 			write(" ".replicate(width));
 			write("\033[" ~ width.to!string ~ "D");
@@ -314,14 +273,11 @@ final class ArkTUI
 			if (displayText.length > width)
 				displayText = displayText[0 .. width];
 
-			if (cursorPos < displayText.length)
-			{
+			if (cursorPos < displayText.length) {
 				write(displayText[0 .. cursorPos]);
 				write(noConColorize(displayText[cursorPos .. cursorPos + 1], Color.WHITE));
 				write(displayText[cursorPos + 1 .. $]);
-			}
-			else
-			{
+			} else {
 				write(displayText);
 				if (cursorPos == displayText.length && displayText.length < width)
 					write(noConColorize("█", Color.WHITE));
@@ -333,85 +289,58 @@ final class ArkTUI
 
 		updateContent();
 
-		while (true)
-		{
+		while (true) {
 			char ch;
-			version (Windows)
-			{
+			version (Windows) {
 				DWORD dwRead;
 				ReadConsoleA(GetStdHandle(STD_INPUT_HANDLE), &ch, 1, &dwRead, null);
-			}
-			else
-			{
+			} else {
 				read(0, &ch, 1);
 			}
 
-			if (ch == '\r' || ch == '\n')
-			{
+			if (ch == '\r' || ch == '\n') {
 				write("\033[2B\033[0G");
 				return input;
-			}
-			else if (ch == '\b' || ch == 127)
-			{
-				if (cursorPos > 0)
-				{
+			} else if (ch == '\b' || ch == 127) {
+				if (cursorPos > 0) {
 					input = input[0 .. cursorPos - 1] ~ input[cursorPos .. $];
 					cursorPos--;
 					updateContent();
 				}
-			}
-			else if (ch == 27)
-			{
-				version (Windows)
-				{
+			} else if (ch == 27) {
+				version (Windows) {
 					char ch2, ch3;
 					DWORD dwReada;
 					ReadConsoleA(GetStdHandle(STD_INPUT_HANDLE), &ch2, 1, &dwReada, null);
-					if (ch2 == '[')
-					{
+					if (ch2 == '[') {
 						ReadConsoleA(GetStdHandle(STD_INPUT_HANDLE), &ch3, 1, &dwReada, null);
-						if (ch3 == 'C' && cursorPos < input.length)
-						{
+						if (ch3 == 'C' && cursorPos < input.length) {
 							cursorPos++;
 							updateContent();
-						}
-						else if (ch3 == 'D' && cursorPos > 0)
-						{
+						} else if (ch3 == 'D' && cursorPos > 0) {
 							cursorPos--;
 							updateContent();
 						}
 					}
-				}
-				else
-				{
+				} else {
 					char[2] seq;
-					if (read(0, &seq[0], 1) == 1 && seq[0] == '[')
-					{
-						if (read(0, &seq[1], 1) == 1)
-						{
-							if (seq[1] == 'C' && cursorPos < input.length)
-							{
+					if (read(0, &seq[0], 1) == 1 && seq[0] == '[') {
+						if (read(0, &seq[1], 1) == 1) {
+							if (seq[1] == 'C' && cursorPos < input.length) {
 								cursorPos++;
 								updateContent();
-							}
-							else if (seq[1] == 'D' && cursorPos > 0)
-							{
+							} else if (seq[1] == 'D' && cursorPos > 0) {
 								cursorPos--;
 								updateContent();
 							}
 						}
 					}
 				}
-			}
-			else if (ch == 3)
-			{
+			} else if (ch == 3) {
 				write("\033[2B\033[0G");
 				throw new Exception("Cancelled");
-			}
-			else if (ch >= 32 && ch <= 126)
-			{
-				if (input.length < width - 1)
-				{
+			} else if (ch >= 32 && ch <= 126) {
+				if (input.length < width - 1) {
 					input = input[0 .. cursorPos] ~ ch ~ input[cursorPos .. $];
 					cursorPos++;
 					updateContent();
@@ -420,18 +349,15 @@ final class ArkTUI
 		}
 	}
 
-	int showMenu(string[] options, string title = "Select an option:")
-	{
+	int showMenu(string[] options, string title = "Select an option:") {
 		int selected = 0;
 
-		while (true)
-		{
+		while (true) {
 			clear();
 			writeln(title);
 			ArkTerm.drawSeparator("─", title.length);
 
-			foreach (i, option; options)
-			{
+			foreach (i, option; options) {
 				if (i == selected)
 					writeln(ArkTerm.colorize("> " ~ option, Color.CYAN));
 				else
@@ -439,8 +365,7 @@ final class ArkTUI
 			}
 
 			char key = readKey();
-			switch (key)
-			{
+			switch (key) {
 			case 'w', 'W':
 				selected = selected > 0 ? selected - 1 : cast(int) options.length - 1;
 				break;
@@ -458,46 +383,41 @@ final class ArkTUI
 	}
 }
 
-unittest
-{
-	class App
-	{
-		void run()
-		{
-			ArkTerm.log(LogLevel.INFO, "Application starting...");
+unittest {
+	class App {
+		void run() {
+			ArkTerm.log(LogLevel.INFO, "執行程式運行中...");
 
 			ArkTerm.drawBreadcrumb([
-				"Home",
-				"Projects",
-				"MyApp",
-				"src"
-			]);
+					"家目錄",
+					"項目",
+					"我的",
+					"源碼"
+				]);
 
 			writeln;
 
-			ArkTerm.drawToast("Something", LogLevel.SUCCESS);
+			ArkTerm.drawToast("Testing Message", LogLevel.SUCCESS);
 
 			writeln;
 
-			ArkTerm.drawAlert("System Information:");
+			ArkTerm.drawAlert("系統資訊");
 			string[][] sysInfo = [
-				["OS", "CPU", "Memory"],
+				["OS", "CPU", "記憶體"],
 				["Linux", "Intel i7", "16GB"],
-				["Version", "Usage", "Available"],
-				[
-					"Ubuntu 22.04", "45%", "8.8GB"
-				]
+				["作業系統", "佔用", "可用"],
+				["Ubuntu 22.04", "45%", "8.8GB"]
 			];
 
-			size_t[] colWidths = [15, 12, 10];
+			size_t[] colWidths = [15, 12, 10, 8];
 
 			ArkTerm.drawColumns(sysInfo, colWidths);
 
 			writeln;
 
-			ArkTerm.drawGauge(75, 0, 100, 25, "CPU Usage", Color.YELLOW);
-			ArkTerm.drawGauge(45, 0, 100, 25, "Memory", Color.GREEN);
-			ArkTerm.drawGauge(90, 0, 100, 25, "Disk", Color.RED);
+			ArkTerm.drawGauge(75, 0, 100, 25, "CPU 利用率", Color.YELLOW);
+			ArkTerm.drawGauge(45, 0, 100, 25, "記憶體", Color.GREEN);
+			ArkTerm.drawGauge(90, 0, 100, 25, "磁碟機", Color.RED);
 
 			writeln;
 
@@ -509,63 +429,61 @@ unittest
 
 			writeln;
 
-			ArkTerm.drawAlert("Some message", LogLevel.SUCCESS);
-			ArkTerm.drawKeyValue("Version", "1.0.0");
-			ArkTerm.drawKeyValue("Author", "Acme");
-			ArkTerm.drawKeyValue("Build", "Debug");
+			ArkTerm.drawAlert("測試消息", LogLevel.SUCCESS);
+			ArkTerm.drawKeyValue("版本", "1.0.0");
+			ArkTerm.drawKeyValue("作者", "Acme");
+			ArkTerm.drawKeyValue("構建", "Debug");
 
 			writeln;
 
-			write("Loading stuff: ");
+			write("加载数据: ");
 
-			foreach (i; 0 .. 301)
-			{
+			foreach (i; 0 .. 301) {
 				ArkTerm.drawProgress(i / 200.0, 10, "", Color.GREEN);
 				Thread.sleep(99.nsecs);
 			}
 
 			writeln;
 
-			ArkTerm.drawStatus("Core module", true, "loaded in 245ms");
-			ArkTerm.drawStatus("Network module", true, "connected");
-			ArkTerm.drawStatus("Database module", false, "connection failed");
+			ArkTerm.drawStatus("核心狀態", true, "loaded in 245ms");
+			ArkTerm.drawStatus("網路狀態", true, "connected");
+			ArkTerm.drawStatus("數據庫狀態", false, "connection failed");
 
 			writeln;
 
 			string[] headers = [
-				"Name",
-				"Status",
+				"名稱",
+				"狀態",
 				"CPU",
-				"Memory"
+				"記憶體"
 			];
 			string[][] data = [
 				[
-					"WebServer",
-					"Running",
+					"網路伺服",
+					"執行中",
 					"12%",
 					"256MB"
 				],
 				[
-					"Database",
-					"Stopped",
+					"數據庫",
+					"已停用",
 					"0%",
 					"0MB"
 				],
 				[
-					"Cache",
-					"Running",
+					"快取",
+					"執行中",
 					"3%",
 					"128MB"
 				]
 			];
 
-			ArkTerm.drawAlert("System Status:");
+			ArkTerm.drawAlert("系統狀態:");
 			ArkTerm.drawTable(headers, data);
 			ArkTerm.drawTextBox(
-				"This is a multi-line text box with automatic word wrapping. " ~
-					"It can contain multiple paragraphs and will probably properly format the content " ~
-					"within the specified width constraints.\n\n", 50, BorderStyle
-					.ROUNDED, Color.BLUE, "Information"
+				"這是一個具有自動換行功能多行文字框。它可以包含多個段落，並且會在指定的寬度限制內尝试格式化內容。\n" ~
+					"這是一個具有自動換行功能多行文字框。它可以包含多個段落，並且會在指定的寬度限制內尝试格式化內容。\n",
+					60, BorderStyle.ROUNDED, Color.BLUE, "资讯"
 			);
 
 			writeln;
@@ -583,15 +501,15 @@ unittest
 			writeln;
 
 			string[string] dashboardPanels = [
-				"Server Status": "Online\nUptime: 24h 15m\nLoad: 0.45",
-				"Database": "Connected\nQueries/sec: 1,247\nConnections: 12/100",
-				"Cache": "Redis Online\nHit Rate: 94.2%\nMemory: 2.1GB",
-				"Network": "Bandwidth: 45 Mbps\nLatency: 12ms\nPacket Loss: 0%"
+				"伺服器狀態": "在線\n在線時長: 24h 15m\n載入: 0.45",
+				"數據庫": "已連接\n事務列隊/sec: 1,247\n連接數: 12/100",
+				"快取": "Redis 在線\n命中率: 94.2%\n記憶體: 2.1GB",
+				"網路": "速率: 45 Mbps\n延遲: 12ms\n丟包率: 0%"
 			];
 
-			ArkTerm.drawAlert("System Dashboard:");
+			ArkTerm.drawAlert("系統儀表板:");
 			ArkTerm.drawDashboard(dashboardPanels, 2);
-			ArkTerm.drawAlert("Project Structure:");
+			ArkTerm.drawAlert("專案結構:");
 
 			string[string] projectTree = [
 				"src/main.d": "Main application file",
@@ -610,21 +528,24 @@ unittest
 
 			writeln;
 
-			ArkTerm.log(LogLevel.SUCCESS, "Demo completed successfully");
+			ArkTerm.log(LogLevel.SUCCESS, "示範已成功完成");
 
 			writeln;
 
-			ArkTerm.drawBarChart(["Some", "Value", "Here"], [1, 10, 20]);
+			ArkTerm.drawBarChart(["測試", "消息", "放置"], [1, 10, 20]);
 
 			writeln;
 
 			double[] datax = [1.0, 2.5, 1.8, 3.2, 2.1, 4.0, 3.5];
-			string[] labels = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul"];
+			string[] labels = [
+				"一月", "二月", "三月", "四月", "五月", "六月",
+				"七月"
+			];
 
-			ArkTerm.drawLineGraph(datax, 60, 15, "Monthly Sales", labels, true, Color.GREEN);
+			ArkTerm.drawLineGraph(datax, 60, 15, "月度銷售統計", labels, true, Color.GREEN);
 
 			string[] categories = [
-				"Housing", "Food", "Transport", "Entertainment", "Savings"
+				"房租", "食物", "交通", "娛樂", "結餘存款"
 			];
 			double[] amounts = [1200, 400, 300, 200, 500];
 
@@ -640,10 +561,10 @@ unittest
 				true);
 
 			FlowNode[] nodes = [
-				FlowNode("start", "Start", 5, 2),
-				FlowNode("process", "Process Data", 5, 8),
-				FlowNode("decision", "Valid?", 5, 14),
-				FlowNode("end", "End", 25, 14)
+				FlowNode("start", "開始", 5, 2),
+				FlowNode("process", "文檔處理", 5, 8),
+				FlowNode("decision", "有效?", 5, 14),
+				FlowNode("end", "結案", 25, 14)
 			];
 
 			FlowConnection[] connections = [
@@ -653,22 +574,22 @@ unittest
 			];
 
 			ArkTerm.drawFlowDiagram(nodes, connections, 50, 20);
-			ArkTerm.printColorized(Color.RED, Color.BLUE, "hi you");
+			ArkTerm.printColorized(Color.RED, Color.BLUE, "泥嚎");
 
-			string[] headers2 = ["Name", "Age", "City"];
+			string[] headers2 = ["名稱", "年齡", "城市"];
 			string[][] data2 = [
-				["Alice", "25", "New York"],
-				["Bob", "30", "London"],
-				["Charlie", "35", "Tokyo"]
+				["Alice", "25", "紐約"],
+				["Bob", "30", "倫敦"],
+				["Charlie", "35", "京東"]
 			];
 			ArkTerm.drawRoundedTable(headers2, data2);
 
-			ArkTerm.drawBarChart(["Some", "Value", "Here"], [1, 10, 20], config:
+			ArkTerm.drawBarChart(["測試", "數據", "放置在這"], [1, 10, 20], config:
 				ArkTerm.ArkBarConfiguration([
-				Color.BRIGHT_RED,
-				Color.BLUE,
-				Color.GRUVBOXRED
-			]));
+						Color.BRIGHT_RED,
+						Color.BLUE,
+						Color.GRUVBOXRED
+					]));
 
 			string name = ArkTUI.getTextInput();
 

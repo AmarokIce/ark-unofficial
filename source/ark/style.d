@@ -2,16 +2,14 @@ module ark.style;
 
 import ark.structures;
 
-template ArkStyle()
-{
+template ArkStyle() {
     /** 
      * Whether to enable color or not.
      *
      * Params:
      *   enable = Color or no color
      */
-    static void enableColor(bool enable = true)
-    {
+    static void enableColor(bool enable = true) {
         colorEnabled = enable;
     }
 
@@ -28,8 +26,7 @@ template ArkStyle()
         color ~ text ~ Color.RESET
     ) : text;
 
-    private static string colorize(string text, Color fg, Color bg = Color.RESET)
-    {
+    private static string colorize(string text, Color fg, Color bg = Color.RESET) {
         if (!colorEnabled)
             return text;
         string fgCode = cast(string) fg;
@@ -37,12 +34,10 @@ template ArkStyle()
         return fgCode ~ bgCode ~ text ~ Color.RESET;
     }
 
-    static void printColorized(T...)(Color fg, Color bg, T args, string separator = " ")
-    {
+    static void printColorized(T...)(Color fg, Color bg, T args, string separator = " ") {
         import std.conv;
 
-        foreach (arg; args)
-        {
+        foreach (arg; args) {
             string text = arg.to!string;
             write(colorize(text, fg, bg) ~ separator);
         }
@@ -61,8 +56,7 @@ template ArkStyle()
         style ~ text ~ Style.RESET
     ) : text;
 
-    private static string toBgCode(Color color) @safe
-    {
+    private static string toBgCode(Color color) @safe {
         import std.regex : matchFirst;
         import std.conv : to;
 
@@ -71,15 +65,13 @@ template ArkStyle()
 
         string colorStr = cast(string) color;
         auto m = colorStr.matchFirst(r"\x1b\[38;5;(\d+)m");
-        if (m)
-        {
+        if (m) {
             int code = m[1].to!int;
             return "\033[48;5;" ~ code.to!string ~ "m";
         }
 
         auto mStd = colorStr.matchFirst(r"\x1b\[(\d+)m");
-        if (mStd)
-        {
+        if (mStd) {
             int code = mStd[1].to!int;
             if (code >= 30 && code <= 37)
                 return "\033[" ~ (code + 10).to!string ~ "m";
